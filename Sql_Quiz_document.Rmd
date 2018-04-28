@@ -1,0 +1,197 @@
+---
+title: "SQL - QUIZ"
+author: "Praveen Kenderla"
+date: "April 15, 2018"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+header-includes: \DeclareMathSizes{12}{12}{12}{12}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Loading Libraries:
+
+
+```{r, message = FALSE, warning = FALSE, results = 'hide', include=TRUE}
+library(tidyverse)
+library(gsubfn)
+library(proto)
+library(RSQLite)
+library(sqldf)
+```
+
+## Data for Quiz{.smaller}
+
+```{r, results = 'hide', message= FALSE, warning = FALSE, include=FALSE}
+COURSES <- tribble (
+  ~CID, ~CTITLE, ~CDUR,
+       7890, "Probability", 5, 
+       7910, "MathStat",    4,
+       8500, "TimeSeries",  5,
+       8000, "GLM",         5,
+       9000, "Inference",   3
+  )
+
+ENROLLMENT <- tribble(
+    ~E_SNO, ~E_PNO, ~ECANCEL,
+     10, 4,  0,
+     10, 7,   "C",
+     11, 45,  0,
+     11, 13,  0,
+     12, 4,   0,
+     13, 15, "C",
+     13, 36,  0,
+     14, 3,  0,
+     14, 18,"C",
+     14, 1,  0,
+     15, 4,  0,
+     15, 7,  0,
+     16, 3,  0,
+     16, 18, 0
+)
+
+PERSONS <- tribble(
+  
+ ~PNO, ~PNAME, ~P_CONO, 
+  1, "SMITH", 3,
+  2, "TORIO", 3,
+  3, "BAPTISTE",3, 
+  4, "LAU", 5,
+  5, "IDE", 5,
+  6, "BLAKE", 10,
+  7, "NAGAI", 2,
+  8, "SPENCER", 10,
+  9, "PARK", 1,
+  10, "BENOIT", 1,
+  11, "LOOSE", 0,
+  13, "PARKER", 6,
+  15, "BEAMER", 7,
+  17, "HOOSER", 4,
+  18, "GELADE", 2,
+  33, "LEE", 9,
+  36, "ADAMSON", 8,
+  45, "MOORS", 4,
+  50, "MAK", 0
+)
+
+SESSIONS <- tribble(
+  ~SNO, ~S_CID, ~SDATE, ~SINS_PNO, ~SCANCEL,
+  10, 7890, "12/2/2015", 3, 0,
+  11, 7910, "11/4/2015", 1, 0,
+  12, 7890, "1/8/2016", 3, "c",
+  13, 7890, "2/2/2016", 3, 0,
+  14, 8000, "4/5/2016", 2, "c", 
+  15, 7910, "1/8/2016", 36, "c", 
+  16, 8500, "4/5/2016", 36, 0,
+  17, 9000, "6/7/2016", 36, 0
+)
+
+
+```
+
+## Q1. Which ones of the following queries produce exactly one result row? 
+
+### Ans: A, B and E options provide one row result.
+
+******
+```{r, results = 'hide', message= FALSE, warning = FALSE, include=FALSE}
+#a. YES
+
+sqldf("SELECT COUNT(*)
+      FROM PERSONS
+      WHERE PNO > 100"
+)
+
+#B. YES
+sqldf("SELECT PNO, COUNT(*)
+      FROM PERSONS
+      WHERE PNO = 2"
+      )
+
+#E.YES
+
+sqldf("SELECT PNAME
+      FROM PERSONS LEFT OUTER JOIN ENROLLMENT ON PNO = E_PNO
+      WHERE PNO = 2
+      GROUP BY PNAME"
+      )
+
+
+```
+******
+
+## 2. How many result rows are produced by this query?
+
+### Ans: 8
+
+******
+```{r, results = 'hide', message= FALSE, warning = FALSE, include=FALSE}
+
+A <- sqldf("SELECT E_SNO
+               FROM ENROLLMENT
+               UNION
+               SELECT SNO
+               FROM SESSIONS
+               WHERE SNO BETWEEN 15 AND 17"
+              )
+
+```
+
+```{r echo = FALSE, results = 'asis'}
+library(knitr)
+kable(A, caption = "Second Question table.", align = 'l')
+```
+******
+
+##3. Which queries produce the following table?
+
+### Ans: D, E, F
+
+******
+```{r, results = 'hide', message= FALSE, warning = FALSE, include= FALSE}
+
+D3 <- sqldf("SELECT DISTINCT PNO, PNAME, 'INSTRUCTOR'
+      FROM PERSONS
+      INNER JOIN SESSIONS ON PNO = SINS_PNO
+      UNION ALL
+      SELECT PNO, PNAME, 'ENROLLEE'
+      FROM PERSONS
+      WHERE PNO IN (SELECT E_PNO
+      FROM ENROLLMENT)
+      ORDER BY 3, 1"
+      )
+E3 <- sqldf("SELECT PNO, PNAME, 'INSTRUCTOR'
+      FROM PERSONS INNER JOIN SESSIONS ON PNO = SINS_PNO
+      UNION
+      SELECT PNO, PNAME, 'ENROLLEE'
+      FROM PERSONS
+      WHERE PNO IN (SELECT E_PNO
+      FROM ENROLLMENT)
+      ORDER BY 3, 1"
+      )
+F3 <- sqldf("SELECT DISTINCT PNO, PNAME, 'INSTRUCTOR'
+      FROM PERSONS INNER JOIN SESSIONS ON PNO = SINS_PNO
+      UNION
+      SELECT PNO, PNAME, 'ENROLLEE'
+      FROM PERSONS P
+      WHERE EXISTS (SELECT E_PNO
+      FROM ENROLLMENT
+      WHERE E_PNO = P.PNO)
+      ORDER BY 3, 1"
+      )
+```
+ ******
+
+
+```{r, echo = FALSE, results = 'asis'}
+library(knitr)
+kable(D3, caption = "Third Question D-table.")
+kable(E3, caption = "Third Question E-table.")
+kable(F3, caption = "Third Question F-table.")
+```
+******
